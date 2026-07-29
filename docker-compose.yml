@@ -28,7 +28,9 @@ services:
 
   # 3. Laravel Backend (API & Core Logic)
   backend:
-    image: bitnami/laravel:11
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: devos_laravel
     restart: unless-stopped
     working_dir: /app
