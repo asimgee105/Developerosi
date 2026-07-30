@@ -5,7 +5,7 @@
       <div class="glow glow-2"></div>
     </div>
 
-    <!-- Passcode Verification Screen (If not authenticated) -->
+    <!-- Passcode Verification Screen -->
     <div v-if="!isAuthenticated" class="auth-overlay">
       <div class="auth-card">
         <div class="logo">
@@ -13,7 +13,7 @@
           <span class="logo-text">DevOS Super Admin</span>
         </div>
         <h2>Admin Authentication</h2>
-        <p class="subtitle">Enter the secret platform admin passcode to access files, SQL execution, and system logs.</p>
+        <p class="subtitle">Enter the secret passcode to access visual filesystem, database execution, user management, and API catalogs.</p>
         
         <form @submit.prevent="verifyPasscode" class="auth-form">
           <div class="form-group">
@@ -36,21 +36,23 @@
       </div>
     </div>
 
-    <!-- Admin Dashboard (If authenticated) -->
+    <!-- Admin Console Dashboard -->
     <div v-else class="admin-container">
       <!-- Header -->
       <header class="admin-header">
         <div class="header-left">
           <NuxtLink to="/dashboard" class="back-link">← Back to Workspace</NuxtLink>
-          <h1>DevOS Administration Portal</h1>
-          <p class="subtitle">Platform statistics, secure codebase file manager, and relational database SQL control console.</p>
+          <h1>DevOS Central Control Console</h1>
+          <p class="subtitle">Full system virtualization, database querying, filesystem overrides, user credit allocation, and route listings.</p>
         </div>
         
         <div class="header-actions">
           <div class="admin-tabs">
-            <button @click="activeTab = 'stats'" :class="{ active: activeTab === 'stats' }">📊 Stats & Billing</button>
-            <button @click="activeTab = 'files'" :class="{ active: activeTab === 'files' }">📂 File Manager</button>
-            <button @click="activeTab = 'database'" :class="{ active: activeTab === 'database' }">🛢️ SQL Database</button>
+            <button @click="switchTab('stats')" :class="{ active: activeTab === 'stats' }">📊 Stats</button>
+            <button @click="switchTab('users')" :class="{ active: activeTab === 'users' }">👥 Users</button>
+            <button @click="switchTab('files')" :class="{ active: activeTab === 'files' }">📂 File Manager</button>
+            <button @click="switchTab('database')" :class="{ active: activeTab === 'database' }">🛢️ SQL Console</button>
+            <button @click="switchTab('routes')" :class="{ active: activeTab === 'routes' }">🔌 API Routes</button>
           </div>
           <button @click="handleRefresh" class="refresh-btn" :disabled="loading">
             <span v-if="loading" class="spinner"></span>
@@ -60,29 +62,26 @@
         </div>
       </header>
 
-      <!-- TAB 1: Platform Stats -->
+      <!-- TAB 1: Stats -->
       <div v-if="activeTab === 'stats'" class="tab-content">
-        <!-- Loading State -->
         <div v-if="loading && !metrics" class="loading-state">
           <div class="spinner-large"></div>
-          <p>Fetching platform metrics...</p>
+          <p>Fetching stats...</p>
         </div>
 
-        <!-- Error State -->
         <div v-else-if="error" class="error-state">
           <span class="error-icon">⚠️</span>
           <h3>Failed to load metrics</h3>
           <p>{{ error }}</p>
         </div>
 
-        <!-- Stats Grid -->
         <div v-else-if="metrics" class="metrics-wrapper">
           <div class="stats-grid">
             <div class="metric-card card-purple">
               <div class="card-glow"></div>
               <div class="card-header">
                 <span class="icon">👥</span>
-                <span class="label">Total Users</span>
+                <span class="label">Total Registered Users</span>
               </div>
               <div class="value">{{ metrics.total_registered_users }}</div>
               <div class="trend">Registered accounts</div>
@@ -95,7 +94,7 @@
                 <span class="label">Workspaces</span>
               </div>
               <div class="value">{{ metrics.total_workspaces }}</div>
-              <div class="trend">Company organizations</div>
+              <div class="trend">Created organizations</div>
             </div>
 
             <div class="metric-card card-green">
@@ -105,14 +104,14 @@
                 <span class="label">Paid Subscribers</span>
               </div>
               <div class="value">{{ metrics.total_active_subscribers }}</div>
-              <div class="trend">Active Stripe price plans</div>
+              <div class="trend">Active Stripe subscriptions</div>
             </div>
 
             <div class="metric-card card-gold">
               <div class="card-glow"></div>
               <div class="card-header">
                 <span class="icon">💰</span>
-                <span class="label">Paid Amount</span>
+                <span class="label">Gross Revenue</span>
               </div>
               <div class="value">${{ parseFloat(metrics.total_invoices_paid_amount).toFixed(2) }}</div>
               <div class="trend">Total collected billing</div>
@@ -127,7 +126,7 @@
                 <thead>
                   <tr>
                     <th>Workspace Name</th>
-                    <th>Stripe Plan Price ID</th>
+                    <th>Stripe Price Plan ID</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -148,20 +147,65 @@
               </table>
               <div v-else class="empty-table">
                 <span class="empty-icon">📂</span>
-                <p>No active paid subscriptions found in database yet.</p>
+                <p>No active subscriptions found in the database.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 2: File Manager -->
+      <!-- TAB 2: Users Management -->
+      <div v-else-if="activeTab === 'users'" class="tab-content users-tab">
+        <div class="table-section">
+          <div class="table-header-row">
+            <h2>Registered Developer Accounts</h2>
+            <p class="desc">Instantly review accounts signed up in the local MySQL database. Double click to allocate credits.</p>
+          </div>
+          
+          <div v-if="loadingUsers" class="loading-state">
+            <div class="spinner-large"></div>
+            <p>Loading developer accounts...</p>
+          </div>
+
+          <div v-else-if="usersList && usersList.length > 0" class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Created At</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in usersList" :key="user.id">
+                  <td class="code-font">{{ user.id }}</td>
+                  <td><strong>{{ user.name }}</strong></td>
+                  <td>{{ user.email }}</td>
+                  <td>{{ user.created_at }}</td>
+                  <td>
+                    <button @click="showCreditPrompt(user.id, user.name)" class="action-table-btn">Alloc Credits</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-else class="empty-table">
+            <span class="empty-icon">👥</span>
+            <p>No user accounts returned from database.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: File Manager -->
       <div v-else-if="activeTab === 'files'" class="tab-content files-tab">
         <div class="filemanager-layout">
           <!-- File tree side list -->
           <div class="file-sidebar">
             <div class="sidebar-header">
-              <h3>Repository Files</h3>
+              <h3>Backend Codebase</h3>
               <input v-model="fileSearch" type="text" placeholder="Filter files..." class="search-input" />
             </div>
             <div class="file-list">
@@ -210,14 +254,14 @@
 
             <div class="editor-placeholder" v-else>
               <span class="icon">📂</span>
-              <h3>No File Selected</h3>
-              <p>Select a file from the repository sidebar to view and edit its code live in the browser.</p>
+              <h3>Filesystem Editor</h3>
+              <p>Select a Laravel backend file from the repository sidebar to view and edit its code live in the browser.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- TAB 3: SQL Database Executor -->
+      <!-- TAB 4: SQL Database Executor -->
       <div v-else-if="activeTab === 'database'" class="tab-content database-tab">
         <div class="db-layout">
           <!-- SQL query input box -->
@@ -276,6 +320,51 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB 5: API Routes Catalog -->
+      <div v-else-if="activeTab === 'routes'" class="tab-content routes-tab">
+        <div class="table-section">
+          <div class="table-header-row">
+            <h2>Laravel API Endpoints Catalog</h2>
+            <input v-model="routeSearch" type="text" placeholder="Search endpoints (e.g. api/v1)..." class="route-search-input" />
+          </div>
+          
+          <div v-if="loadingRoutes" class="loading-state">
+            <div class="spinner-large"></div>
+            <p>Scanning backend routes catalog...</p>
+          </div>
+
+          <div v-else-if="filteredRoutes && filteredRoutes.length > 0" class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Method</th>
+                  <th>URI / Endpoint</th>
+                  <th>Action Handler</th>
+                  <th>Route Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(route, idx) in filteredRoutes" :key="idx">
+                  <td>
+                    <span class="method-badge" :class="route.method.toLowerCase().split('|')[0]">
+                      {{ route.method }}
+                    </span>
+                  </td>
+                  <td><code class="uri-code">{{ route.uri }}</code></td>
+                  <td><code class="action-code">{{ route.action }}</code></td>
+                  <td class="name-col">{{ route.name }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-else class="empty-table">
+            <span class="empty-icon">🔌</span>
+            <p>No active routes matched search query.</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -283,7 +372,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 
-const activeTab = ref('stats') // stats, files, database
+const activeTab = ref('stats') // stats, users, files, database, routes
 const loading = ref(false)
 const error = ref('')
 
@@ -309,6 +398,15 @@ const runningQuery = ref(false)
 const queryResults = ref(null)
 const queryError = ref('')
 
+// Dynamic users list
+const usersList = ref([])
+const loadingUsers = ref(false)
+
+// Dynamic API routes catalog
+const routesList = ref([])
+const routeSearch = ref('')
+const loadingRoutes = ref(false)
+
 const getApiUrl = (path) => {
   if (typeof window !== 'undefined') {
     return `http://${window.location.hostname}:8000${path}`
@@ -319,9 +417,18 @@ const getApiUrl = (path) => {
 const handleRefresh = () => {
   if (activeTab.value === 'stats') {
     fetchAdminMetrics()
+  } else if (activeTab.value === 'users') {
+    fetchUsersList()
   } else if (activeTab.value === 'files') {
     fetchFilesList()
+  } else if (activeTab.value === 'routes') {
+    fetchRoutesList()
   }
+}
+
+const switchTab = (tab) => {
+  activeTab.value = tab
+  handleRefresh()
 }
 
 // Get admin secret passcode from session storage
@@ -369,6 +476,8 @@ const logoutAdmin = () => {
   passcode.value = ''
   metrics.value = null
   filesList.value = []
+  usersList.value = []
+  routesList.value = []
 }
 
 // 1. Fetch Platform Stats
@@ -395,7 +504,56 @@ const fetchAdminMetrics = async () => {
   }
 }
 
-// 2. Fetch File tree list
+// 2. Fetch Users List dynamically using SQL Executor background query
+const fetchUsersList = async () => {
+  loadingUsers.value = true
+  try {
+    const response = await fetch(getApiUrl('/api/admin/db/query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      },
+      body: JSON.stringify({ query: 'SELECT id, name, email, created_at FROM users;' })
+    })
+    if (response.ok) {
+      const data = await response.json()
+      usersList.value = data.results
+    }
+  } catch (err) {
+    console.error('Failed to fetch users list', err)
+  } finally {
+    loadingUsers.value = false
+  }
+}
+
+// Alloc credits helper helper popup
+const showCreditPrompt = async (userId, name) => {
+  const credits = prompt(`Enter credits amount to allocate for user ${name}:`, '100')
+  if (!credits) return
+  
+  const query = `UPDATE users SET credits = credits + ${parseInt(credits)} WHERE id = ${userId};`
+  try {
+    const response = await fetch(getApiUrl('/api/admin/db/query'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      },
+      body: JSON.stringify({ query })
+    })
+    if (response.ok) {
+      alert(`Successfully added ${credits} credits to ${name}'s account!`)
+      fetchUsersList()
+    }
+  } catch (err) {
+    alert('Query failed.')
+  }
+}
+
+// 3. Fetch File tree list
 const fetchFilesList = async () => {
   loading.value = true
   try {
@@ -477,7 +635,38 @@ const saveFileContent = async () => {
   }
 }
 
-// 3. Database Execution methods
+// 4. Fetch dynamic routes
+const fetchRoutesList = async () => {
+  loadingRoutes.value = true
+  try {
+    const response = await fetch(getApiUrl('/api/admin/routes'), {
+      headers: { 
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      }
+    })
+    if (response.ok) {
+      const data = await response.json()
+      routesList.value = data.routes
+    }
+  } catch (err) {
+    console.error('Failed to load route catalog', err)
+  } finally {
+    loadingRoutes.value = false
+  }
+}
+
+const filteredRoutes = computed(() => {
+  if (!routeSearch.value) return routesList.value
+  const s = routeSearch.value.toLowerCase()
+  return routesList.value.filter(r => 
+    r.uri.toLowerCase().includes(s) || 
+    r.method.toLowerCase().includes(s) || 
+    r.action.toLowerCase().includes(s)
+  )
+})
+
+// 5. Database Execution methods
 const setSql = (sql) => {
   sqlQuery.value = sql
 }
@@ -530,6 +719,7 @@ onMounted(() => {
   overflow-x: hidden;
   padding: 2.5rem 1.5rem;
   color: #fafafa;
+  font-family: Inter, system-ui, sans-serif;
 }
 
 /* Background glows */
@@ -564,7 +754,7 @@ onMounted(() => {
   right: 10%;
 }
 
-/* Auth Challenge Panel styling */
+/* Auth Challenge Panel */
 .auth-overlay {
   display: flex;
   justify-content: center;
@@ -647,7 +837,6 @@ input {
 input:focus {
   outline: none;
   border-color: #a855f7;
-  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
 }
 
 .alert {
@@ -769,7 +958,6 @@ h1 {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: inherit;
 }
 
 .refresh-btn:hover {
@@ -788,7 +976,6 @@ h1 {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: inherit;
 }
 
 .logout-btn:hover {
@@ -826,7 +1013,7 @@ h1 {
   color: #fca5a5;
 }
 
-/* Stats view styling */
+/* Stats view */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -892,11 +1079,42 @@ h1 {
   padding: 1.75rem;
 }
 
-.table-section h2 {
+.table-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.table-header-row h2 {
   font-size: 1.15rem;
   font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 1.25rem;
+  margin: 0;
+}
+
+.table-header-row .desc {
+  font-size: 0.85rem;
+  color: #71717a;
+  margin: 0;
+}
+
+.action-table-btn {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #d8b4fe;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-table-btn:hover {
+  background: #a855f7;
+  color: #fff;
 }
 
 table {
@@ -911,12 +1129,18 @@ th {
   color: #71717a;
   padding: 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
 }
 
 td {
   padding: 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   font-size: 0.9rem;
+}
+
+.code-font {
+  font-family: monospace;
+  font-weight: 600;
 }
 
 .workspace-cell {
@@ -963,7 +1187,7 @@ td {
   color: #fde047;
 }
 
-/* File Manager Tab styling */
+/* File Manager Tab */
 .filemanager-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
@@ -1111,15 +1335,6 @@ td {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.save-file-btn:hover {
-  opacity: 0.95;
-}
-
-.editor-body {
-  flex: 1;
 }
 
 .code-textarea {
@@ -1167,7 +1382,7 @@ td {
   line-height: 1.5;
 }
 
-/* Database Tab styling */
+/* Database Tab */
 .db-layout {
   display: grid;
   grid-template-rows: auto 1fr;
@@ -1203,11 +1418,6 @@ td {
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
-}
-
-.run-query-btn:hover {
-  opacity: 0.95;
 }
 
 .sql-textarea {
@@ -1322,6 +1532,54 @@ td {
 .empty-results p {
   font-size: 0.85rem;
   margin: 0;
+}
+
+/* API Routes Catalog Tab */
+.route-search-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.85rem;
+  width: 250px;
+}
+
+.route-search-input:focus {
+  outline: none;
+  border-color: #a855f7;
+}
+
+.method-badge {
+  font-family: monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.method-badge.get { background: rgba(34, 197, 94, 0.15); color: #4ade80; }
+.method-badge.post { background: rgba(59, 130, 246, 0.15); color: #60a5fa; }
+.method-badge.put { background: rgba(234, 179, 8, 0.15); color: #fde047; }
+.method-badge.delete { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+
+.uri-code {
+  font-family: monospace;
+  font-weight: 600;
+  color: #e4e4e7;
+  font-size: 0.85rem;
+}
+
+.action-code {
+  font-family: monospace;
+  color: #a1a1aa;
+  font-size: 0.8rem;
+}
+
+.name-col {
+  color: #71717a;
+  font-size: 0.85rem;
 }
 
 .spinner {

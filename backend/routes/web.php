@@ -27,7 +27,13 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Super Admin platform metrics reporting endpoint
-Route::get('/api/admin/metrics', function () {
+Route::get('/api/admin/metrics', function (Request $request) {
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
     $totalUsers = \App\Models\User::count();
     $totalWorkspaces = \App\Models\Organization::count();
     $totalSubscriptions = \App\Models\BillingSubscription::where('status', 'active')->count();
@@ -49,20 +55,26 @@ Route::get('/api/admin/metrics', function () {
 
 // Admin File Manager - Get file tree (excluding vendor, node_modules, caches)
 Route::get('/api/admin/files', function (Request $request) {
-    // We are on a monorepo setup: backend is /app, frontend is /app/../frontend
-    $basePath = realpath(base_path() . '/..'); // Browse entire monorepo
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
+    $basePath = realpath(base_path()); // Browse backend codebase
     $files = [];
     
-    if (file_exists($basePath)) {
+    if ($basePath && file_exists($basePath)) {
         $directory = new RecursiveDirectoryIterator($basePath, RecursiveDirectoryIterator::SKIP_DOTS);
         $iterator = new RecursiveIteratorIterator($directory);
         
         foreach ($iterator as $file) {
-            $relativePath = str_replace($basePath . DIRECTORY_SEPARATOR, '', $file->getRealPath());
+            $realPath = $file->getRealPath();
+            $relativePath = str_replace($basePath . DIRECTORY_SEPARATOR, '', $realPath);
             $normalizedPath = str_replace(DIRECTORY_SEPARATOR, '/', $relativePath);
             
             // Skip massive caches and libraries
-            if (Str::startsWith($normalizedPath, ['backend/vendor/', 'frontend/node_modules/', 'frontend/.nuxt/', 'frontend/.output/', '.git/', 'backend/storage/', 'frontend/dist/'])) {
+            if (Str::startsWith($normalizedPath, ['vendor/', 'storage/', '.git/', 'bootstrap/cache/'])) {
                 continue;
             }
             
@@ -79,8 +91,14 @@ Route::get('/api/admin/files', function (Request $request) {
 
 // Admin File Manager - Get single file content
 Route::get('/api/admin/files/content', function (Request $request) {
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
     $path = $request->query('path');
-    $basePath = realpath(base_path() . '/..');
+    $basePath = realpath(base_path());
     $fullPath = realpath($basePath . '/' . $path);
     
     // Safety check: prevent directory traversal
@@ -100,9 +118,15 @@ Route::get('/api/admin/files/content', function (Request $request) {
 
 // Admin File Manager - Save/write file changes
 Route::post('/api/admin/files/content', function (Request $request) {
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
     $path = $request->input('path');
     $content = $request->input('content');
-    $basePath = realpath(base_path() . '/..');
+    $basePath = realpath(base_path());
     $fullPath = $basePath . '/' . $path;
     
     // Safety check: prevent directory traversal
@@ -118,6 +142,12 @@ Route::post('/api/admin/files/content', function (Request $request) {
 
 // Admin DB Executor - Run raw SQL queries
 Route::post('/api/admin/db/query', function (Request $request) {
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
     $query = $request->input('query');
     
     try {
@@ -133,5 +163,28 @@ Route::post('/api/admin/db/query', function (Request $request) {
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 400);
     }
+});
+
+// Admin Route Catalog - Get all active Laravel API routes
+Route::get('/api/admin/routes', function (Request $request) {
+    $secret = $request->header('X-Admin-Secret');
+    $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
+    if ($secret !== $expectedSecret) {
+        return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
+    }
+
+    $routeCollection = Route::getRoutes();
+    $routes = [];
+    
+    foreach ($routeCollection as $value) {
+        $routes[] = [
+            'method' => implode('|', $value->methods()),
+            'uri' => $value->uri(),
+            'name' => $value->getName() ?: 'N/A',
+            'action' => str_replace('App\\Http\\Controllers\\', '', $value->getActionName()),
+        ];
+    }
+    
+    return response()->json(['routes' => $routes]);
 });
 
