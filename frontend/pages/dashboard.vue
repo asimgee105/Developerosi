@@ -19,6 +19,7 @@
         <div class="nav-tabs">
           <button @click="currentTab = 'grid'" :class="{ active: currentTab === 'grid' }">📊 Dashboard Grid</button>
           <button @click="currentTab = 'security'" :class="{ active: currentTab === 'security' }">🔒 Security & Telemetry</button>
+          <NuxtLink to="/admin" class="admin-tab">👑 Super Admin</NuxtLink>
         </div>
 
         <div class="shortcut-tip" @click="triggerPalettePrompt">
@@ -712,6 +713,26 @@ const triggerPalettePrompt = () => {
 .nav-tabs button.active {
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
+}
+
+.admin-tab {
+  background: transparent;
+  border: none;
+  color: #a1a1aa;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  display: inline-block;
+}
+
+.admin-tab:hover {
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.08);
 }
 
 .shortcut-tip {
