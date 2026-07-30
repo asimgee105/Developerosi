@@ -51,15 +51,14 @@ services:
       - db
       - redis
 
-  # 4. Vue/Nuxt Frontend (User Interface)
   frontend:
-    image: node:22-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: devos_vue
-    working_dir: /app
     restart: unless-stopped
     volumes:
       - ./frontend:/app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
     ports:
       - "3000:3000"
     depends_on:
