@@ -443,7 +443,7 @@ const getAdminSecret = () => {
 const verifyPasscode = async () => {
   authError.value = ''
   try {
-    const response = await fetch(getApiUrl('/api/admin/metrics'), {
+    const response = await fetch(getApiUrl('/api/admin/metrics?secret=' + encodeURIComponent(passcode.value)), {
       headers: { 
         'Accept': 'application/json',
         'X-Admin-Secret': passcode.value
@@ -485,7 +485,7 @@ const fetchAdminMetrics = async () => {
   loading.value = true
   error.value = ''
   try {
-    const response = await fetch(getApiUrl('/api/admin/metrics'), {
+    const response = await fetch(getApiUrl('/api/admin/metrics?secret=' + encodeURIComponent(getAdminSecret())), {
       headers: { 
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
@@ -515,7 +515,10 @@ const fetchUsersList = async () => {
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
       },
-      body: JSON.stringify({ query: 'SELECT id, name, email, created_at FROM users;' })
+      body: JSON.stringify({ 
+        query: 'SELECT id, name, email, created_at FROM users;',
+        secret: getAdminSecret()
+      })
     })
     if (response.ok) {
       const data = await response.json()
@@ -542,7 +545,10 @@ const showCreditPrompt = async (userId, name) => {
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
       },
-      body: JSON.stringify({ query })
+      body: JSON.stringify({ 
+        query,
+        secret: getAdminSecret()
+      })
     })
     if (response.ok) {
       alert(`Successfully added ${credits} credits to ${name}'s account!`)
@@ -557,7 +563,7 @@ const showCreditPrompt = async (userId, name) => {
 const fetchFilesList = async () => {
   loading.value = true
   try {
-    const response = await fetch(getApiUrl('/api/admin/files'), {
+    const response = await fetch(getApiUrl('/api/admin/files?secret=' + encodeURIComponent(getAdminSecret())), {
       headers: { 
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
@@ -589,7 +595,7 @@ const selectFile = async (path) => {
   selectedFileContent.value = ''
   loadingFile.value = true
   try {
-    const response = await fetch(getApiUrl(`/api/admin/files/content?path=${encodeURIComponent(path)}`), {
+    const response = await fetch(getApiUrl(`/api/admin/files/content?path=${encodeURIComponent(path)}&secret=${encodeURIComponent(getAdminSecret())}`), {
       headers: { 
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
@@ -619,7 +625,8 @@ const saveFileContent = async () => {
       },
       body: JSON.stringify({
         path: selectedFilePath.value,
-        content: selectedFileContent.value
+        content: selectedFileContent.value,
+        secret: getAdminSecret()
       })
     })
     if (response.ok) {
@@ -639,7 +646,7 @@ const saveFileContent = async () => {
 const fetchRoutesList = async () => {
   loadingRoutes.value = true
   try {
-    const response = await fetch(getApiUrl('/api/admin/routes'), {
+    const response = await fetch(getApiUrl('/api/admin/routes?secret=' + encodeURIComponent(getAdminSecret())), {
       headers: { 
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
@@ -685,7 +692,10 @@ const runQuery = async () => {
         'Accept': 'application/json',
         'X-Admin-Secret': getAdminSecret()
       },
-      body: JSON.stringify({ query: sqlQuery.value })
+      body: JSON.stringify({ 
+        query: sqlQuery.value,
+        secret: getAdminSecret()
+      })
     })
     
     const data = await response.json()

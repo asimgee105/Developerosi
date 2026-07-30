@@ -28,7 +28,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Super Admin platform metrics reporting endpoint
 Route::get('/api/admin/metrics', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
@@ -55,7 +55,7 @@ Route::get('/api/admin/metrics', function (Request $request) {
 
 // Admin File Manager - Get file tree (excluding vendor, node_modules, caches)
 Route::get('/api/admin/files', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
@@ -91,7 +91,7 @@ Route::get('/api/admin/files', function (Request $request) {
 
 // Admin File Manager - Get single file content
 Route::get('/api/admin/files/content', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
@@ -118,7 +118,7 @@ Route::get('/api/admin/files/content', function (Request $request) {
 
 // Admin File Manager - Save/write file changes
 Route::post('/api/admin/files/content', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
@@ -142,7 +142,7 @@ Route::post('/api/admin/files/content', function (Request $request) {
 
 // Admin DB Executor - Run raw SQL queries
 Route::post('/api/admin/db/query', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
@@ -167,7 +167,7 @@ Route::post('/api/admin/db/query', function (Request $request) {
 
 // Admin Route Catalog - Get all active Laravel API routes
 Route::get('/api/admin/routes', function (Request $request) {
-    $secret = $request->header('X-Admin-Secret');
+    $secret = $request->header('X-Admin-Secret') ?? $request->input('secret');
     $expectedSecret = env('ADMIN_SECRET_KEY', 'devos_admin_secret_2026');
     if ($secret !== $expectedSecret) {
         return response()->json(['message' => 'Unauthorized: Invalid admin secret passcode.'], 401);
