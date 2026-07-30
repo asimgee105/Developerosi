@@ -21,5 +21,5 @@ WORKDIR /app
 # Expose port 8000
 EXPOSE 8000
 
-# Install dependencies and start server
-CMD ["sh", "-c", "composer install --no-interaction && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
+# Install dependencies, setup environment, and start server
+CMD ["sh", "-c", "composer install --no-interaction && ( [ ! -f .env ] && cp .env.example .env && php artisan key:generate || true ) && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"]
