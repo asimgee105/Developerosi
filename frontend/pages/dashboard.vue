@@ -292,6 +292,13 @@ const saving = ref(false)
 const dashboardId = ref('')
 const workspaceId = ref('default-workspace-uuid')
 
+const getApiUrl = (path) => {
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:8000${path}`
+  }
+  return `http://localhost:8000${path}`
+}
+
 // 4 Standard Widgets Grid Layout
 const layout = ref([
   { id: 'ai_assistant', w: 6, h: 4, x: 0, y: 0, title: 'DevOS AI Copilot' },
@@ -341,7 +348,7 @@ onMounted(async () => {
 // Fetch layout
 const fetchLayout = async () => {
   try {
-    const response = await fetch(`http://localhost:8000/api/v1/workspaces/${workspaceId.value}/dashboards/active`, {
+    const response = await fetch(getApiUrl(`/api/v1/workspaces/${workspaceId.value}/dashboards/active`), {
       headers: { 'Accept': 'application/json' }
     })
     
@@ -358,7 +365,7 @@ const fetchLayout = async () => {
 // Fetch DORA Metrics from real backend API
 const fetchDoraMetrics = async () => {
   try {
-    const response = await fetch(`http://localhost:8000/api/v1/workspaces/${workspaceId.value}/dora`, {
+    const response = await fetch(getApiUrl(`/api/v1/workspaces/${workspaceId.value}/dora`), {
       headers: { 'Accept': 'application/json' }
     })
     if (response.ok) {
@@ -374,7 +381,7 @@ const fetchDoraMetrics = async () => {
 const fetchRepoHealth = async () => {
   try {
     // Standard mock repository ID mapping
-    const response = await fetch(`http://localhost:8000/api/v1/repositories/mock-repo-id/health`, {
+    const response = await fetch(getApiUrl(`/api/v1/repositories/mock-repo-id/health`), {
       headers: { 'Accept': 'application/json' }
     })
     if (response.ok) {
@@ -389,7 +396,7 @@ const fetchRepoHealth = async () => {
 // Fetch active sessions list
 const fetchSessions = async () => {
   try {
-    const response = await fetch('http://localhost:8000/api/auth/sessions', {
+    const response = await fetch(getApiUrl('/api/auth/sessions'), {
       headers: { 'Accept': 'application/json' }
     })
     if (response.ok) {
@@ -404,7 +411,7 @@ const fetchSessions = async () => {
 // Revoke a session
 const revokeSession = async (sessionId) => {
   try {
-    const response = await fetch(`http://localhost:8000/api/auth/sessions/${sessionId}`, {
+    const response = await fetch(getApiUrl(`/api/auth/sessions/${sessionId}`), {
       method: 'DELETE',
       headers: { 'Accept': 'application/json' }
     })
@@ -427,7 +434,7 @@ const saveLayout = async () => {
 
   saving.value = true
   try {
-    const response = await fetch(`http://localhost:8000/api/v1/dashboards/${dashboardId.value}/layout`, {
+    const response = await fetch(getApiUrl(`/api/v1/dashboards/${dashboardId.value}/layout`), {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -450,7 +457,7 @@ const saveLayout = async () => {
 const initiateTwoFactor = async () => {
   loading2fa.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/auth/two-factor/setup', {
+    const response = await fetch(getApiUrl('/api/auth/two-factor/setup'), {
       method: 'POST',
       headers: { 'Accept': 'application/json' }
     })
@@ -468,7 +475,7 @@ const initiateTwoFactor = async () => {
 const confirmTwoFactor = async () => {
   loading2fa.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/auth/two-factor/verify', {
+    const response = await fetch(getApiUrl('/api/auth/two-factor/verify'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -496,7 +503,7 @@ const disableTwoFactor = async () => {
   if (!confirm('Are you sure you want to disable 2FA?')) return
   loading2fa.value = true
   try {
-    const response = await fetch('http://localhost:8000/api/auth/two-factor/disable', {
+    const response = await fetch(getApiUrl('/api/auth/two-factor/disable'), {
       method: 'POST',
       headers: { 'Accept': 'application/json' }
     })

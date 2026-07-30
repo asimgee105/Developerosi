@@ -181,6 +181,13 @@ onMounted(() => {
   }
 })
 
+const getApiUrl = (path) => {
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:8000${path}`
+  }
+  return `http://localhost:8000${path}`
+}
+
 // Main Login handler
 const handleLogin = async (forceLogin = false) => {
   loading.value = true
@@ -192,7 +199,7 @@ const handleLogin = async (forceLogin = false) => {
       payload.force = true
     }
 
-    const response = await fetch('http://localhost:8000/api/auth/login', {
+    const response = await fetch(getApiUrl('/api/auth/login'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -242,7 +249,7 @@ const handle2FA = async () => {
   error.value = ''
 
   try {
-    const response = await fetch('http://localhost:8000/two-factor-challenge', {
+    const response = await fetch(getApiUrl('/two-factor-challenge'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

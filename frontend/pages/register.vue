@@ -96,12 +96,19 @@ const form = reactive({
   password_confirmation: ''
 })
 
+const getApiUrl = (path) => {
+  if (typeof window !== 'undefined') {
+    return `http://${window.location.hostname}:8000${path}`
+  }
+  return `http://localhost:8000${path}`
+}
+
 const handleRegister = async () => {
   loading.value = true
   error.value = ''
 
   try {
-    const response = await fetch('http://localhost:8000/register', {
+    const response = await fetch(getApiUrl('/register'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
