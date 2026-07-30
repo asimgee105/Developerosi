@@ -5,7 +5,39 @@
       <div class="glow glow-2"></div>
     </div>
 
-    <div class="admin-container">
+    <!-- Passcode Verification Screen (If not authenticated) -->
+    <div v-if="!isAuthenticated" class="auth-overlay">
+      <div class="auth-card">
+        <div class="logo">
+          <span class="logo-icon">👑</span>
+          <span class="logo-text">DevOS Super Admin</span>
+        </div>
+        <h2>Admin Authentication</h2>
+        <p class="subtitle">Enter the secret platform admin passcode to access files, SQL execution, and system logs.</p>
+        
+        <form @submit.prevent="verifyPasscode" class="auth-form">
+          <div class="form-group">
+            <label for="passcode">Admin Passcode</label>
+            <input 
+              v-model="passcode" 
+              type="password" 
+              id="passcode" 
+              placeholder="••••••••••••" 
+              required 
+              autofocus
+            />
+          </div>
+          <div v-if="authError" class="alert error-alert">
+            <span class="alert-icon">⚠️</span>
+            <span class="alert-text">{{ authError }}</span>
+          </div>
+          <button type="submit" class="submit-btn">Verify Identity</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Admin Dashboard (If authenticated) -->
+    <div v-else class="admin-container">
       <!-- Header -->
       <header class="admin-header">
         <div class="header-left">
@@ -15,7 +47,6 @@
         </div>
         
         <div class="header-actions">
-          <!-- Admin Sub-Navigation Tabs -->
           <div class="admin-tabs">
             <button @click="activeTab = 'stats'" :class="{ active: activeTab === 'stats' }">📊 Stats & Billing</button>
             <button @click="activeTab = 'files'" :class="{ active: activeTab === 'files' }">📂 File Manager</button>
@@ -25,6 +56,7 @@
             <span v-if="loading" class="spinner"></span>
             <span v-else>↻ Refresh</span>
           </button>
+          <button @click="logoutAdmin" class="logout-btn">🔒 Lock</button>
         </div>
       </header>
 
@@ -255,6 +287,11 @@ const activeTab = ref('stats') // stats, files, database
 const loading = ref(false)
 const error = ref('')
 
+// Super Admin auth state
+const isAuthenticated = ref(false)
+const passcode = ref('')
+const authError = ref('')
+
 // Telemetry state
 const metrics = ref(null)
 
@@ -287,14 +324,68 @@ const handleRefresh = () => {
   }
 }
 
+// Get admin secret passcode from session storage
+const getAdminSecret = () => {
+  if (typeof window !== 'undefined') {
+    return window.sessionStorage.getItem('devos_admin_secret') || ''
+  }
+  return ''
+}
+
+// Verify Passcode
+const verifyPasscode = async () => {
+  authError.value = ''
+  try {
+    const response = await fetch(getApiUrl('/api/admin/metrics'), {
+      headers: { 
+        'Accept': 'application/json',
+        'X-Admin-Secret': passcode.value
+      }
+    })
+    if (response.status === 401) {
+      throw new Error('Invalid secret passcode.')
+    }
+    if (!response.ok) {
+      throw new Error('Connection error.')
+    }
+    
+    // Save in session storage
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('devos_admin_secret', passcode.value)
+    }
+    isAuthenticated.value = true
+    metrics.value = await response.json()
+    fetchFilesList()
+  } catch (err) {
+    authError.value = err.message
+  }
+}
+
+const logoutAdmin = () => {
+  if (typeof window !== 'undefined') {
+    window.sessionStorage.removeItem('devos_admin_secret')
+  }
+  isAuthenticated.value = false
+  passcode.value = ''
+  metrics.value = null
+  filesList.value = []
+}
+
 // 1. Fetch Platform Stats
 const fetchAdminMetrics = async () => {
   loading.value = true
   error.value = ''
   try {
     const response = await fetch(getApiUrl('/api/admin/metrics'), {
-      headers: { 'Accept': 'application/json' }
+      headers: { 
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      }
     })
+    if (response.status === 401) {
+      logoutAdmin()
+      throw new Error('Session expired or unauthorized.')
+    }
     if (!response.ok) throw new Error('Server metrics endpoint offline.')
     metrics.value = await response.json()
   } catch (err) {
@@ -309,8 +400,15 @@ const fetchFilesList = async () => {
   loading.value = true
   try {
     const response = await fetch(getApiUrl('/api/admin/files'), {
-      headers: { 'Accept': 'application/json' }
+      headers: { 
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      }
     })
+    if (response.status === 401) {
+      logoutAdmin()
+      return
+    }
     if (response.ok) {
       const data = await response.json()
       filesList.value = data.files
@@ -334,7 +432,10 @@ const selectFile = async (path) => {
   loadingFile.value = true
   try {
     const response = await fetch(getApiUrl(`/api/admin/files/content?path=${encodeURIComponent(path)}`), {
-      headers: { 'Accept': 'application/json' }
+      headers: { 
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
+      }
     })
     if (response.ok) {
       const data = await response.json()
@@ -355,7 +456,8 @@ const saveFileContent = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
       },
       body: JSON.stringify({
         path: selectedFilePath.value,
@@ -391,7 +493,8 @@ const runQuery = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'X-Admin-Secret': getAdminSecret()
       },
       body: JSON.stringify({ query: sqlQuery.value })
     })
@@ -410,8 +513,12 @@ const runQuery = async () => {
 }
 
 onMounted(() => {
-  fetchAdminMetrics()
-  fetchFilesList()
+  const secret = getAdminSecret()
+  if (secret) {
+    isAuthenticated.value = true
+    fetchAdminMetrics()
+    fetchFilesList()
+  }
 })
 </script>
 
@@ -423,7 +530,6 @@ onMounted(() => {
   overflow-x: hidden;
   padding: 2.5rem 1.5rem;
   color: #fafafa;
-  font-family: inherit;
 }
 
 /* Background glows */
@@ -456,6 +562,122 @@ onMounted(() => {
   background: #3b82f6;
   bottom: -150px;
   right: 10%;
+}
+
+/* Auth Challenge Panel styling */
+.auth-overlay {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4rem 1rem;
+  min-height: 80vh;
+  position: relative;
+  z-index: 10;
+}
+
+.auth-card {
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3rem;
+  border-radius: 28px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.8);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.logo-icon { font-size: 1.8rem; }
+.logo-text {
+  font-weight: 700;
+  font-size: 1.6rem;
+  background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.auth-card h2 {
+  font-size: 1.5rem;
+  text-align: center;
+  margin: 0 0 0.5rem 0;
+}
+
+.auth-card .subtitle {
+  color: #a1a1aa;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #d4d4d8;
+}
+
+input {
+  background: rgba(9, 9, 11, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+input:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.2);
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.error-alert {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: #fff;
+  border: none;
+  padding: 0.85rem;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  opacity: 0.95;
 }
 
 .admin-container {
@@ -553,6 +775,24 @@ h1 {
 .refresh-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.logout-btn {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
   color: #fff;
 }
 
