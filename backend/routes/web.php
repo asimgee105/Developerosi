@@ -4,7 +4,12 @@ use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return response()->json([
+        'message' => 'DevOS Platform API Gateway is active.',
+        'version' => '1.0.0',
+        'status' => 'healthy',
+        'timestamp' => now()
+    ]);
 });
 
 // Custom Authenticated Session routes with 2-device check & session termination
