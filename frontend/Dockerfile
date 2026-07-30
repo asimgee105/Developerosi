@@ -5,8 +5,8 @@ WORKDIR /app
 # Copy package configuration
 COPY package.json ./
 
-# Install dependencies ignoring scripts to prevent race conditions during postinstall
-RUN npm install --ignore-scripts
+# Install dependencies using yarn to bypass npm's internal edgesOut tree resolution bug
+RUN yarn install --ignore-scripts
 
 # Copy the rest of the application files
 COPY . .
