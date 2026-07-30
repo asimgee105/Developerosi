@@ -231,6 +231,7 @@ const handleLogin = async (forceLogin = false) => {
     // Login successful
     showDeviceLimitModal.value = false
     alert('Logged in successfully to Workspace: ' + (data.active_organization?.name || 'Personal'))
+    router.push('/dashboard')
   } catch (err) {
     error.value = err.message
   } finally {
