@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('cloud_environments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('user_id');
+            $table->unsignedBigInteger('user_id');
             $table->uuid('workspace_id');
             $table->string('status')->default('booting'); // booting, running, hibernated
             $table->json('compute_spec')->nullable();
